@@ -161,9 +161,10 @@ def warp_homography(source, target_shape, Hinv):
             # TODO: apply the homography to the x,y location
             p = apply_homography(Hinv, np.array([[x, y]]))[0]
             # TODO: check if the homography result is outside the source image. If so, move on to next pixel.
+            # TODO: Otherwise, set the pixel at this location to the bilinear interpolation result.
             if p[0] >= 0 and p[0] <= source.shape[0] and p[1] >= 0 and p[1] <= source.shape[1]:
                 result[x, y] = bilinear_interp(source, (p[1], p[0])) # source[np.int(p[0]), np.int(p[1])]
-            # TODO: Otherwise, set the pixel at this location to the bilinear interpolation result.
+            
     # return the output image
     return result
 
@@ -253,13 +254,21 @@ def blend_with_mask(source, target, mask):
         A new image representing the linear combination of the mask (and it's inverse)
         with source and target, respectively.
     """
-    pass
 
     # TODO: First, convert the mask image to be a floating point between 0 and 1
-
     # TODO: Next, use it to make a linear combination of the pixels
+    mask_float = mask 
+    mask = mask.astype(np.float)
+    new_img = np.zeros_like(source)
+    for x in range(len(mask)):
+        for y in range(len(mask[0])):
+            # get greyscale https://en.wikipedia.org/wiki/Grayscale
+            gs = mask[x,y,0] * 0.2126 + mask[x,y,1] * 0.7152 + mask[x,y,2] * 0.0722
+            gs_float = gs / 255.0
+            new_img[x, y] = (1-gs_float) * target[x, y] + gs_float * source[x, y]
 
     # TODO: Convert the result to be the same type as source and return the result
+    return new_img.astype(source.dtype)
 
 
 def composite_image(source, target, source_pts, target_pts, mask):
@@ -274,12 +283,15 @@ def composite_image(source, target, source_pts, target_pts, mask):
         target_pts: The corresponding coordinates on the target image.
         mask:       A greyscale image representing the mast to use.
     """
-    pass
     # TODO: Compute the homography to warp points from the target to the source coordinate frame.
+    H = compute_H(source_pts[:,[1,0]], target_pts[:,[1,0]])
 
     # TODO: Warp the source image to a new image (that has the same shape as target) using the homography.
+    Hinv = np.linalg.inv(H)
+    warped_img = warp_homography(source, (target.shape[0], target.shape[1], 3), Hinv)
 
     # TODO: Blend the warped images and return them.
+    return blend_with_mask(warped_img, target, mask)
 
 
 def rectify(args):
