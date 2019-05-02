@@ -145,13 +145,19 @@ def warp_homography(source, target_shape, Hinv):
         An image of target_shape with source's type containing the source image warped by the homography.
     """
     # TODO: allocation a numpy array of zeros that is size target_shape and the same type as source.
+    print("Hinv", Hinv)
+    print("source", source.dtype)
+    print(target_shape)
+    result = np.zeros(target_shape, dtype=source.dtype)
 
     # TODO: Iterate over all pixels in the target image
-    for x in range(width):
-        for y in range(height):
-            pass
+    for x in range(len(result)):
+        for y in range(len(result[0])):
             # TODO: apply the homography to the x,y location
+            p = apply_homography(Hinv, np.array([[x, y]]))[0]
             # TODO: check if the homography result is outside the source image. If so, move on to next pixel.
+            if p[0] >= 0 and p[0] <= source.shape[0] and p[1] >= 0 and p[1] <= source.shape[1]:
+                result[x, y] = source[np.int(p[0]), np.int(p[1])]
             # TODO: Otherwise, set the pixel at this location to the bilinear interpolation result.
     # return the output image
     return result
@@ -172,16 +178,20 @@ def rectify_image(image, source_points, target_points, crop):
     """
     # TODO: Compute the rectifying homography H that warps the source points to the
     # target points.
-    H = compute_H(source_points, target_points)
+    H = compute_H(source_points[:,[1,0]], target_points[:,[1,0]])
+    print("H", H)
 
     # TODO: Apply the homography to a rectangle of the bounding box of the of the image to find the
     # warped bounding box in the rectified space.
-    apply_homography(H, np.array([
+    src_box = np.array([
         [0, 0],
         [image.shape[0], 0],
         [0, image.shape[1]],
         [image.shape[0], image.shape[1]]
-    ]))
+    ])
+    tar_box = apply_homography(H, src_box)
+    print(image.shape)
+    print(tar_box)
 
     # Find the min_x and min_y values in the warped space to keep.
     if crop:
@@ -190,13 +200,24 @@ def rectify_image(image, source_points, target_points, crop):
 
     else:
         # TODO: Compute the min x and min y of the warped bounding box
-        pass
+        min_y = np.min(tar_box[:,1])
+        min_x = np.min(tar_box[:,0])
     # TODO: Compute a translation matrix T such that min_x and min_y will go to zero
+    t = np.array([
+        [1, 0, -min_x],
+        [0, 1, -min_y],
+        [0, 0, 1]
+    ])
 
     # TODO: Compute the rectified bounding box by applying the translation matrix to
     # the warped bounding box.
+    tar_box = np.append(tar_box, np.ones((len(tar_box), 1)), axis=1)
+    tar_box = (t @ tar_box.T)[:2].T
+    # print(tar_box)
 
     # TODO: Compute the inverse homography that maps the rectified bounding box to the original bounding box
+    Hinv = compute_H(tar_box, src_box)
+    # Hinv = np.linalg.inv(H)
 
     # Determine the shape of the output image
     if crop:
@@ -204,11 +225,15 @@ def rectify_image(image, source_points, target_points, crop):
         # TODO: Determine the side of the final output image as the second highest X and Y values of the
         # rectified bounding box
     else:
-        pass
         # TODO: Determine the side of the final output image as the maximum X and Y values of the
         # rectified bounding box
+        max_y = np.int(np.max(tar_box[:,1]))
+        max_x = np.int(np.max(tar_box[:,0]))
+
+    print("(tar_box[:,0]", max_x, max_y)
 
     # TODO: Finally call warp_homography to rectify the image and return the result
+    return warp_homography(image, (max_x, max_y, 3), Hinv)
 
 
 def blend_with_mask(source, target, mask):
@@ -262,7 +287,6 @@ def rectify(args):
 
     # Loads the source points into a 4-by-2 array
     source_points = np.array(args.source).reshape(4, 2)
-    print(source_points)
 
     # load the destination points, or select some smart default ones if None
     if args.dst == None:
