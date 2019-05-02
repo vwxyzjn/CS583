@@ -33,10 +33,18 @@ def build_A(pts1, pts2):
             str(pts1.shape), str(pts2.shape)))
     if pts1.shape[0] < 4:
         raise ValueError('There must be at least 4 pairs of correspondences.')
-    num_pts = pts1.shape[0]
 
     # TODO: Create A which is 2N by 9...
-    A = 
+    A = np.array([
+        [pts1[0,0], pts1[0,1], 1, 0, 0 ,0, -pts2[0,0]*pts1[0,0], -pts2[0,0]*pts1[0,1], -pts2[0,0]],
+        [0, 0 ,0, pts1[0,0], pts1[0,1], 1, -pts2[0,1]*pts1[0,0], -pts2[0,1]*pts1[0,1], -pts2[0,1]],
+        [pts1[1,0], pts1[1,1], 1, 0, 0 ,0, -pts2[1,0]*pts1[1,0], -pts2[1,0]*pts1[1,1], -pts2[1,0]],
+        [0, 0 ,0, pts1[1,0], pts1[1,1], 1, -pts2[1,1]*pts1[1,0], -pts2[1,1]*pts1[1,1], -pts2[1,1]],
+        [pts1[2,0], pts1[2,1], 1, 0, 0 ,0, -pts2[2,0]*pts1[2,0], -pts2[2,0]*pts1[2,1], -pts2[2,0]],
+        [0, 0 ,0, pts1[2,0], pts1[2,1], 1, -pts2[2,1]*pts1[2,0], -pts2[2,1]*pts1[2,1], -pts2[2,1]],
+        [pts1[3,0], pts1[3,1], 1, 0, 0 ,0, -pts2[3,0]*pts1[3,0], -pts2[3,0]*pts1[3,1], -pts2[3,0]],
+        [0, 0 ,0, pts1[3,0], pts1[3,1], 1, -pts2[3,1]*pts1[3,0], -pts2[3,1]*pts1[3,1], -pts2[3,1]],
+    ])
 
     # TODO: iterate over the points and populate the rows of A.
 
@@ -56,20 +64,20 @@ def compute_H(pts1, pts2):
         A 3x3 homography matrix that maps homogeneous coordinates of pts 1 to those in pts2.
     """
     # TODO: Construct the intermediate A matrix using build_A
-    A = 
+    A = build_A(pts1, pts2)
 
     # TODO: Compute the symmetric matrix AtA.
-    AtA =
+    AtA = A.T @ A
 
     # TODO: Compute the eigenvalues and eigenvectors of AtA.
-    eig_vals, eig_vecs = 
-
+    eig_vals, eig_vecs = np.linalg.eig(AtA)
+    
     # TODO: Determine which eigenvalue is the smallest
-    min_eig_val_index = 
+    min_eig_val_index = eig_vals.argmin()
 
     # TODO: Return the eigenvector corresponding to the smallest eigenvalue, reshaped
     # as a 3x3 matrix.
-    min_eig_vec = 
+    min_eig_vec = eig_vecs[:,min_eig_val_index].reshape(3,3)
 
     return min_eig_vec
 
@@ -86,6 +94,7 @@ def bilinear_interp(image, point):
     Returns:
         A 3-dimensional numpy array representing the pixel value interpolated by "point".
     """
+    pass
     # TODO: extract x and y from point
 
     # TODO: Compute i,j as the integer parts of x, y
@@ -110,14 +119,17 @@ def apply_homography(H, points):
     Returns:
         An Nx2 matrix of points that are the result of applying H to points.
     """
+    pass
 
     # TODO: First, transform the points to homogenous coordinates by adding a `1`
-    homogenous_points 
+    # homogenous_points 
+    h_points = np.append(points, np.ones((len(points),1)), axis=1)
 
     # TODO: Apply the homography
+    hg = H @ h_points.T
 
     # TODO: Convert the result back to cartesian coordinates and return the results
-
+    return (hg[:2] / hg[2]).T
 
 def warp_homography(source, target_shape, Hinv):
     """
@@ -137,6 +149,7 @@ def warp_homography(source, target_shape, Hinv):
     # TODO: Iterate over all pixels in the target image
     for x in range(width):
         for y in range(height):
+            pass
             # TODO: apply the homography to the x,y location
             # TODO: check if the homography result is outside the source image. If so, move on to next pixel.
             # TODO: Otherwise, set the pixel at this location to the bilinear interpolation result.
@@ -157,20 +170,27 @@ def rectify_image(image, source_points, target_points, crop):
     Returns:
         A new image containing the input image rectified to target_points.
     """
-
     # TODO: Compute the rectifying homography H that warps the source points to the
     # target points.
+    H = compute_H(source_points, target_points)
 
     # TODO: Apply the homography to a rectangle of the bounding box of the of the image to find the
     # warped bounding box in the rectified space.
+    apply_homography(H, np.array([
+        [0, 0],
+        [image.shape[0], 0],
+        [0, image.shape[1]],
+        [image.shape[0], image.shape[1]]
+    ]))
 
     # Find the min_x and min_y values in the warped space to keep.
     if crop:
+        pass
         # TODO: pick the second smallest values of x and y in the warped bounding box
 
     else:
         # TODO: Compute the min x and min y of the warped bounding box
-
+        pass
     # TODO: Compute a translation matrix T such that min_x and min_y will go to zero
 
     # TODO: Compute the rectified bounding box by applying the translation matrix to
@@ -180,9 +200,11 @@ def rectify_image(image, source_points, target_points, crop):
 
     # Determine the shape of the output image
     if crop:
+        pass
         # TODO: Determine the side of the final output image as the second highest X and Y values of the
         # rectified bounding box
     else:
+        pass
         # TODO: Determine the side of the final output image as the maximum X and Y values of the
         # rectified bounding box
 
@@ -204,6 +226,7 @@ def blend_with_mask(source, target, mask):
         A new image representing the linear combination of the mask (and it's inverse)
         with source and target, respectively.
     """
+    pass
 
     # TODO: First, convert the mask image to be a floating point between 0 and 1
 
@@ -224,6 +247,7 @@ def composite_image(source, target, source_pts, target_pts, mask):
         target_pts: The corresponding coordinates on the target image.
         mask:       A greyscale image representing the mast to use.
     """
+    pass
     # TODO: Compute the homography to warp points from the target to the source coordinate frame.
 
     # TODO: Warp the source image to a new image (that has the same shape as target) using the homography.
@@ -238,6 +262,7 @@ def rectify(args):
 
     # Loads the source points into a 4-by-2 array
     source_points = np.array(args.source).reshape(4, 2)
+    print(source_points)
 
     # load the destination points, or select some smart default ones if None
     if args.dst == None:
@@ -312,15 +337,18 @@ if __name__ == '__main__':
 
     parser_rectify = subparsers.add_parser(
         'rectify', help='Rectifies an image such that the input rectangle is front-parallel.')
-    parser_rectify.add_argument('input', type=str, help='The image to warp.')
+    parser_rectify.add_argument('input', type=str, help='The image to warp.',
+                                default="example_rectify_input.jpg")
     parser_rectify.add_argument('source', metavar='f', type=float, nargs=8,
-                                help='A floating point value part of x1 y1 ... x4 y4')
+                                help='A floating point value part of x1 y1 ... x4 y4',
+                                default=[3, 481, 80, 0, 602, 215, 637, 475])
     parser_rectify.add_argument(
         '--crop', help='If true, the result image is cropped.', action='store_true', default=False)
     parser_rectify.add_argument('--dst', metavar='x', type=float, nargs='+',
                                 default=None, help='The four destination points in the output image.')
     parser_rectify.add_argument(
-        'output', type=str, help='Where to save the result.')
+        'output', type=str, help='Where to save the result.',
+        default="myexample_rectify_output.jpg")
     parser_rectify.set_defaults(func=rectify)
 
     parser_composite = subparsers.add_parser(
