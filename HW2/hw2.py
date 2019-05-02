@@ -189,7 +189,8 @@ def rectify_image(image, source_points, target_points, crop):
 
     # Find the min_x and min_y values in the warped space to keep.
     if crop:
-        pass
+        min_y = sorted(tar_box[:,1])[1]
+        min_x = sorted(tar_box[:,0])[1]
         # TODO: pick the second smallest values of x and y in the warped bounding box
 
     else:
@@ -214,7 +215,8 @@ def rectify_image(image, source_points, target_points, crop):
 
     # Determine the shape of the output image
     if crop:
-        pass
+        max_y = np.int(sorted(tar_box[:,1])[-2])
+        max_x = np.int(sorted(tar_box[:,0])[-2])
         # TODO: Determine the side of the final output image as the second highest X and Y values of the
         # rectified bounding box
     else:
