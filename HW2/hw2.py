@@ -94,17 +94,26 @@ def bilinear_interp(image, point):
     Returns:
         A 3-dimensional numpy array representing the pixel value interpolated by "point".
     """
-    pass
     # TODO: extract x and y from point
+    y, x = point
 
     # TODO: Compute i,j as the integer parts of x, y
+    i = np.int(x)
+    j = np.int(y)
 
     # TODO: check that i + 1 and j + 1 are within range of the image. if not, just return the pixel at i, j
+    # print(image.shape)
+    # print(x,i, y, j)
+    if i + 1 >= image.shape[0] or j + 1 >= image.shape[1]:
+        return image[i, j]
 
     # TODO: Compute a and b as the floating point parts of x, y
+    a = x - i
+    b = y - j
 
     # TODO: Take a linear combination of the four points weighted according to the inverse area around them
     # (i.e., the formula for bilinear interpolation)
+    return (1-a)*(1-b)*image[i,j] +a*(1-b)*image[i+1, j] +a*b*image[i+1, j+1] + (1-a)*b*image[i,j+1]
 
 
 def apply_homography(H, points):
@@ -119,7 +128,6 @@ def apply_homography(H, points):
     Returns:
         An Nx2 matrix of points that are the result of applying H to points.
     """
-    pass
 
     # TODO: First, transform the points to homogenous coordinates by adding a `1`
     # homogenous_points 
@@ -154,7 +162,7 @@ def warp_homography(source, target_shape, Hinv):
             p = apply_homography(Hinv, np.array([[x, y]]))[0]
             # TODO: check if the homography result is outside the source image. If so, move on to next pixel.
             if p[0] >= 0 and p[0] <= source.shape[0] and p[1] >= 0 and p[1] <= source.shape[1]:
-                result[x, y] = source[np.int(p[0]), np.int(p[1])]
+                result[x, y] = bilinear_interp(source, (p[1], p[0])) # source[np.int(p[0]), np.int(p[1])]
             # TODO: Otherwise, set the pixel at this location to the bilinear interpolation result.
     # return the output image
     return result
