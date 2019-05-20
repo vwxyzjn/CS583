@@ -81,7 +81,6 @@ def gaussian_kernel(ksize=5):
     kernel /= kernel.sum()
     return kernel
 
-
 def lucas_kanade(H, I):
     """Given images H and I, compute the displacement that should be applied to
     H so that it aligns with I."""
@@ -98,59 +97,56 @@ def lucas_kanade(H, I):
     # To achieve this, use a _normalized_ 3x3 sobel kernel and the convolve_img
     # function above. NOTE: since you're convolving the kernel, you need to 
     # multiply it by -1 to get the proper direction.
-    I_x = -1 * convolve_img(I, np.array([
+    S_x = np.array([
         [-1, 0, 1],
         [-2, 0, 2],
         [-1, 0, 1]        
-    ]))
-    I_y = -1 * convolve_img(I, np.array([
+    ]) / 8 
+    S_y = np.array([
         [-1, -2, -1],
         [0, 0, 0],
         [1, 2, 1]        
-    ]))
+    ]) / 8 
+    I_x = -1 * convolve_img(I, S_x)
+    I_y = -1 * convolve_img(I, S_y)
     I_t = I - H
 
     # Compute the various products (Ixx, Ixy, Iyy, Ixt, Iyt) necessary to form
     # AtA. Apply the mask to each product.
-    Ixx = np.multiply(I_x, I_x)
-    Ixy = np.multiply(I_x, I_y)
-    Iyy = np.multiply(I_y, I_y)
-    Ixt = np.multiply(I_x, I_t)
-    Iyt = np.multiply(I_y, I_t)
-    Ixx[mask.squeeze()] = [0,0,0]
-    Ixy[mask.squeeze()] = [0,0,0]
-    Iyy[mask.squeeze()] = [0,0,0]
-    Ixt[mask.squeeze()] = [0,0,0]
-    Iyt[mask.squeeze()] = [0,0,0]
+    Ixx = I_x * I_x * mask
+    Ixy = I_x * I_y * mask
+    Iyy = I_y * I_y * mask
+    Ixt = I_x * I_t * mask
+    Iyt = I_y * I_t * mask
 
     # Build the AtA matrix and Atb vector. You can use the .sum() function on numpy arrays to help.
     AtA = np.array([
         [Ixx.sum(), Ixy.sum()],
         [Ixy.sum(), Iyy.sum()]
     ])
-    Atb = np.array([
-        [Ixt.sum()],
-        [Iyt.sum()]
-    ])
+    Atb = -np.array([Ixt.sum(), Iyt.sum()])
 
     # Solve for the displacement using linalg.solve
-    displacement = np.linalg.solve(AtA, -Atb)
+    try:
+        displacement = np.linalg.solve(AtA, Atb)
+    except np.linalg.LinAlgError:
+        #print(AtA, Atb, np.sum(I_x * I_x), np.sum(I_x * I_x * mask))
+        displacement = np.array([0., 0.])
+    
 
     # return the displacement and some intermediate data for unit testing..
     return displacement, AtA, Atb
-
 
 def iterative_lucas_kanade(H, I, steps):
     # Run the basic Lucas Kanade algorithm in a loop `steps` times.
     # Start with an initial displacement of 0 and accumulate displacements.
     disp = np.zeros((2,), np.float32)
     for i in range(steps):
-        pass
         # Translate the H image by the current displacement (using the translate function above)
-        H = translate(H, disp)
+        Ht = translate(H, disp)
         
         # run Lucas Kanade and update the displacement estimate
-        disp = lucas_kanade(H, I)
+        disp += lucas_kanade(Ht, I)[0]
 
     # Return the final displacement
     return disp
@@ -208,10 +204,9 @@ def pyramid_lucas_kanade(H, I, initial_d, levels, steps):
 
         # Use the iterative Lucas Kanade method to compute a displacement
         # between the two images at this level.
-        iterative_lucas_kanade(img1_t, img2, steps)
         
-
         # Update the displacement based on the one you just computed.
+        disp += iterative_lucas_kanade(img1_t, img2, steps)
         
 
     # Return the final displacement.
@@ -280,15 +275,14 @@ def mosaic(images, initial_displacements, load_displacements_from):
     else:
         print("Refining displacements with Pyramid Iterative Lucas Kanade...")
         final_displacements = []
-        for i in range(N):
+        for i in range(N-1):
             # TODO Use Pyramid Iterative Lucas Kanade to compute displacements from
             # each image to the image that follows it, wrapping back around at
             # the end. A suggested number of levels and steps is 4 and 5
             # respectively. Make sure to append the displacement to
             # final_displacements so it gets saved to disk if desired.
-            for i in range(N-1):
-                final_displacements += [pyramid_lucas_kanade(
-                    images[i], images[i+1], initial_displacements[i], 4, 5)]
+            final_displacements += [pyramid_lucas_kanade(
+                images[i], images[i+1], initial_displacements[i], 4, 5)]
             
 
             # Some debugging output to help diagnose errors.
@@ -305,6 +299,9 @@ def mosaic(images, initial_displacements, load_displacements_from):
 
     # Use the final displacements and the images' shape compute the full
     # panorama shape and the starting position for the first panorama image.
+    pano_height = 480
+    pano_width = 640 * N
+    initial_pos = np.array([0.,0.])
 
     # Build the panorama.
     print("Building panorama...")
