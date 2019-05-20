@@ -192,7 +192,7 @@ def pyramid_lucas_kanade(H, I, initial_d, levels, steps):
     # pyramid) and compute the updated displacement at each level using Lucas
     # Kanade.
     disp = initial_d / 2.**(levels)
-    for level in range(levels):
+    for level in reversed(range(levels)):
         # Get the two images for this pyramid level.
         img1, img2 = gp1[level], gp2[level]
         
@@ -268,21 +268,23 @@ def mosaic(images, initial_displacements, load_displacements_from):
     initial_displacement[i] gives the translation that should be appiled to
     images[i] to align it with images[(i+1) % N]."""
     N = len(images)
-
     if load_displacements_from:
         print("Loading saved displacements...")
         final_displacements = pickle.load(open(load_displacements_from, "rb"))
     else:
         print("Refining displacements with Pyramid Iterative Lucas Kanade...")
         final_displacements = []
-        for i in range(N-1):
+        for i in range(N):
             # TODO Use Pyramid Iterative Lucas Kanade to compute displacements from
             # each image to the image that follows it, wrapping back around at
             # the end. A suggested number of levels and steps is 4 and 5
             # respectively. Make sure to append the displacement to
             # final_displacements so it gets saved to disk if desired.
+            j = i + 1 # handle wrapping around
+            if j == N:
+                j = 0
             final_displacements += [pyramid_lucas_kanade(
-                images[i], images[i+1], initial_displacements[i], 4, 5)]
+                images[i], images[j], initial_displacements[i], 4, 5)]
             
 
             # Some debugging output to help diagnose errors.
@@ -299,9 +301,11 @@ def mosaic(images, initial_displacements, load_displacements_from):
 
     # Use the final displacements and the images' shape compute the full
     # panorama shape and the starting position for the first panorama image.
-    pano_height = 480
-    pano_width = 640 * N
-    initial_pos = np.array([0.,0.])
+    fd = np.array(final_displacements)
+    pano_height = 700
+    pano_width = 6000
+    
+    initial_pos = np.array([fd[:,1][:-1].sum(), 0])
 
     # Build the panorama.
     print("Building panorama...")
