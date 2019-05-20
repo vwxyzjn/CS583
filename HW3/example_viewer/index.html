@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>CS 583 Project 2 Panorama Viewer</title>
+        <link rel="stylesheet" type="text/css" href="css/panorama_viewer.css" />
+        <link rel="stylesheet" type="text/css" href="css/style.css" />
+
+        <script src="https://code.jquery.com/jquery-2.2.3.min.js" type="text/javascript"></script>
+        <script src="js/jquery.panorama_viewer.js" type="text/javascript"></script>
+
+        <script>
+function load_image(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $("#pimg").attr("src", e.target.result);
+
+            $(".pview").panorama_viewer({
+                repeat: true,
+                animationTime: 200,
+                overlay: false
+            });
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+$(window).load(function(){
+    $("#img_upload").change(function(){
+        load_image(this);
+    });
+
+    $(".pview").panorama_viewer({
+        repeat: true,
+        animationTime: 200,
+        overlay: false
+    });
+});
+        </script>
+    </head>
+    <body>
+        <div class="pview">
+            <img id="pimg" src="example_warped.png"/>
+        </div>
+
+        <form id="imgform" style="width: 420px; margin: 0 auto;">
+            <label for="img_upload" style="margin-right: 10px;">View your own panorama:</label>
+            <input type="file" id="img_upload" />
+        </form>
+    </body>
+</html>
