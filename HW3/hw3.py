@@ -302,8 +302,8 @@ def mosaic(images, initial_displacements, load_displacements_from):
     # Use the final displacements and the images' shape compute the full
     # panorama shape and the starting position for the first panorama image.
     fd = np.array(final_displacements)
-    pano_height = 700
-    pano_width = 6000
+    pano_height = int(images[0].shape[0] + fd[:,1][:-1].sum()) + 1
+    pano_width = int(images[0].shape[1] - fd[:,0][:-1].sum()) + 1
     
     initial_pos = np.array([fd[:,1][:-1].sum(), 0])
 
